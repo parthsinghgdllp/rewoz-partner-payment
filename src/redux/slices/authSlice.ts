@@ -49,6 +49,29 @@ export const loginUser = createAsyncThunk(
     }
 );
 
+export const validateToken = createAsyncThunk(
+    'auth/validateToken',
+    async (token: string, { rejectWithValue }) => {
+        try {
+            const response = await axiosInstance.post('Auth/validateToken', { token, remember: true });
+            const { data, succeeded, message } = response.data;
+
+            if (!succeeded) {
+                return rejectWithValue(message);
+            }
+
+            if (typeof window !== 'undefined') {
+                localStorage.setItem('accessToken', data.token);
+                localStorage.setItem('user', JSON.stringify(data));
+            }
+
+            return data;
+        } catch (error: any) {
+            return rejectWithValue(error.response?.data?.message || 'Token validation failed');
+        }
+    }
+);
+
 const authSlice = createSlice({
     name: 'auth',
     initialState,
@@ -63,6 +86,12 @@ const authSlice = createSlice({
         },
         clearError: (state) => {
             state.error = null;
+        },
+        setToken: (state, action: PayloadAction<string>) => {
+            state.isAuthenticated = true;
+            if (typeof window !== 'undefined') {
+                localStorage.setItem('accessToken', action.payload);
+            }
         },
     },
     extraReducers: (builder) => {
@@ -79,9 +108,22 @@ const authSlice = createSlice({
             .addCase(loginUser.rejected, (state, action: PayloadAction<any>) => {
                 state.loading = false;
                 state.error = action.payload;
+            })
+            .addCase(validateToken.pending, (state) => {
+                state.loading = true;
+                state.error = null;
+            })
+            .addCase(validateToken.fulfilled, (state, action: PayloadAction<any>) => {
+                state.loading = false;
+                state.isAuthenticated = true;
+                state.user = action.payload;
+            })
+            .addCase(validateToken.rejected, (state, action: PayloadAction<any>) => {
+                state.loading = false;
+                state.error = action.payload;
             });
     },
 });
 
-export const { logout, clearError } = authSlice.actions;
+export const { logout, clearError, setToken } = authSlice.actions;
 export default authSlice.reducer;

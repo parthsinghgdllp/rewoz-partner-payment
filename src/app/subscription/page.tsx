@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     CheckCircle2,
@@ -21,12 +21,20 @@ import { Button } from '@/components/ui/Button';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState, AppDispatch } from '@/redux/store';
 import { fetchSubscription, cancelSubscription, createPaymentLink, subscriptionStatus } from '@/redux/slices/subscriptionSlice';
-import { logout } from '@/redux/slices/authSlice';
-import { useRouter } from 'next/navigation';
+import { logout, setToken, validateToken } from '@/redux/slices/authSlice';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { formatUSD } from '@/utils/currency';
 import Image from 'next/image';
 
 export default function SubscriptionPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen bg-[#FFF8F6] flex items-center justify-center">Loading...</div>}>
+            <SubscriptionContent />
+        </Suspense>
+    );
+}
+
+function SubscriptionContent() {
     const dispatch = useDispatch<AppDispatch>();
     const router = useRouter();
     const { subscriptionList, isLoading, doesUserCancelled, subscriptionEndsOn } = useSelector(
@@ -37,10 +45,20 @@ export default function SubscriptionPage() {
     const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
     const [upgradingPriceId, setUpgradingPriceId] = useState<string | null>(null);
 
+    const searchParams = useSearchParams();
+    const token = searchParams.get('token');
+
     useEffect(() => {
+        if (token) {
+            dispatch(setToken(token));
+            dispatch(validateToken(token));
+            const url = new URL(window.location.href);
+            url.searchParams.delete('token');
+            router.replace(url.pathname + url.search);
+        }
         dispatch(fetchSubscription());
         dispatch(subscriptionStatus());
-    }, [dispatch]);
+    }, [dispatch, token, router]);
 
     const handleLogout = () => {
         dispatch(logout());
@@ -108,7 +126,9 @@ export default function SubscriptionPage() {
                     <div className="flex items-center gap-4">
                         {user && (
                             <div className="hidden md:block text-right">
-                                <p className="text-sm font-semibold">{user.name}</p>
+                                <p className="text-sm font-semibold">
+                                    {user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Partner User'}
+                                </p>
                                 <p className="text-xs text-gray-500">{user.email}</p>
                             </div>
                         )}

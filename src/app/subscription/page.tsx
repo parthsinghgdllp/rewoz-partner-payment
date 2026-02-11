@@ -11,7 +11,11 @@ import {
     X,
     AlertCircle,
     LogOut,
-    ArrowRight
+    ArrowRight,
+    Gift,
+    Clock,
+    DollarSign,
+    Database
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { useDispatch, useSelector } from 'react-redux';
@@ -33,21 +37,30 @@ export default function SubscriptionPage() {
 
     useEffect(() => {
         dispatch(fetchSubscription());
-
-        // Redirect if not authenticated (mock check)
-        // if (!isAuthenticated) {
-        //   router.push('/login');
-        // }
-    }, [dispatch, isAuthenticated, router]);
+    }, [dispatch]);
 
     const handleLogout = () => {
         dispatch(logout());
         router.push('/login');
     };
 
-    const handleCancel = () => {
+    const handleCancel = async () => {
         if (confirm('Are you sure you want to cancel your subscription?')) {
-            dispatch(cancelSubscription());
+            await dispatch(cancelSubscription());
+            dispatch(fetchSubscription());
+        }
+    };
+
+    const getIcon = (iconName: string) => {
+        const props = { className: "w-5 h-5 text-[#fc6957] flex-shrink-0 mt-0.5" };
+        switch (iconName) {
+            case 'gift': return <Gift {...props} />;
+            case 'clock': return <Clock {...props} />;
+            case 'dollar-sign': return <DollarSign {...props} />;
+            case 'credit-card': return <CreditCard {...props} />;
+            case 'zap': return <Zap {...props} />;
+            case 'database': return <Database {...props} />;
+            default: return <CheckCircle2 {...props} />;
         }
     };
 
@@ -86,44 +99,33 @@ export default function SubscriptionPage() {
 
             <main className="max-w-6xl mx-auto px-6 py-12">
                 {/* Status Alert */}
-                <AnimatePresence>
-                    {doesUserCancelled && (
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.95 }}
-                            className="mb-8 p-6 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-4 shadow-sm"
-                        >
-                            <AlertCircle className="w-6 h-6 text-amber-500 flex-shrink-0 mt-1" />
-                            <div>
-                                <h3 className="font-bold text-amber-900">Subscription Cancelled</h3>
-                                <p className="text-amber-800 text-sm mt-1">
-                                    Your access will remain active until <strong>{subscriptionEndsOn ? new Date(subscriptionEndsOn).toLocaleDateString() : 'the next billing cycle'}</strong>.
-                                    After this date, your account will be downgraded to the Lite plan.
-                                </p>
-                                <button className="mt-3 text-sm font-bold text-[#fc6957] hover:underline flex items-center gap-1">
-                                    Reactivate Plan <ArrowRight className="w-4 h-4" />
-                                </button>
-                            </div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                {doesUserCancelled && (
+                    <div className="mb-8 p-6 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-4 shadow-sm">
+                        <AlertCircle className="w-6 h-6 text-amber-500 flex-shrink-0 mt-1" />
+                        <div>
+                            <h3 className="font-bold text-amber-900">Subscription Cancelled</h3>
+                            <p className="text-amber-800 text-sm mt-1">
+                                Your access will remain active until <strong>{subscriptionEndsOn ? new Date(subscriptionEndsOn).toLocaleDateString() : 'the next billing cycle'}</strong>.
+                                After this date, your account will be downgraded to the Lite plan.
+                            </p>
+                            <button className="mt-3 text-sm font-bold text-[#fc6957] hover:underline flex items-center gap-1">
+                                Reactivate Plan <ArrowRight className="w-4 h-4" />
+                            </button>
+                        </div>
+                    </div>
+                )}
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div className="flex flex-wrap justify-center items-start gap-8">
                     {isLoading ? (
                         // Skeleton Loader
-                        Array(3).fill(0).map((_, i) => (
-                            <div key={i} className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100 animate-pulse h-96" />
+                        Array(2).fill(0).map((_, i) => (
+                            <div key={i} className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100 animate-pulse h-[500px] w-full max-w-sm" />
                         ))
                     ) : (
                         subscriptionList.map((plan, index) => (
-                            <motion.div
+                            <div
                                 key={plan.priceId}
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: index * 0.1 }}
-                                whileHover={{ y: -5 }}
-                                className={`relative bg-white rounded-3xl p-8 shadow-xl border-2 transition-all duration-300 ${plan.isActive
+                                className={`relative bg-white rounded-3xl p-8 shadow-xl border-2 w-full max-w-sm ${plan.isActive
                                     ? 'border-[#fc6957] ring-4 ring-[#fc6957]/5'
                                     : 'border-transparent hover:border-[#fc6957]/30'
                                     }`}
@@ -136,6 +138,9 @@ export default function SubscriptionPage() {
 
                                 <div className="mb-6">
                                     <h2 className="text-2xl font-bold text-[#333333] mb-1">{plan.name}</h2>
+                                    {plan.description && (
+                                        <p className="text-sm text-gray-500 mb-4">{plan.description}</p>
+                                    )}
                                     <div className="flex items-baseline gap-1">
                                         <span className="text-4xl font-black text-[#333333]">{formatUSD(plan.amount)}</span>
                                         <span className="text-gray-500 font-medium">/month</span>
@@ -159,11 +164,14 @@ export default function SubscriptionPage() {
                                         </button>
                                     </div>
 
-                                    <ul className="space-y-3">
-                                        {plan.features.slice(0, expandedIndex === index ? undefined : 4).map((feature, i) => (
+                                    <ul className="space-y-4">
+                                        {plan.features.slice(0, expandedIndex === index ? undefined : 3).map((feature, i) => (
                                             <li key={i} className="flex items-start gap-3">
-                                                <CheckCircle2 className="w-5 h-5 text-[#fc6957] flex-shrink-0 mt-0.5" />
-                                                <span className="text-sm text-gray-600 leading-tight">{feature}</span>
+                                                {getIcon(feature.value.icon)}
+                                                <div>
+                                                    <span className="text-sm font-bold text-gray-800 block">{feature.value.title}</span>
+                                                    <span className="text-xs text-gray-600 line-clamp-2">{feature.value.description}</span>
+                                                </div>
                                             </li>
                                         ))}
                                     </ul>
@@ -186,47 +194,12 @@ export default function SubscriptionPage() {
                                         </Button>
                                     )}
                                 </div>
-                            </motion.div>
+                            </div>
                         ))
                     )}
 
-                    {/* Bonus Card (from native app concept) */}
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: 0.5 }}
-                        className="flex flex-col justify-center p-8 rounded-3xl bg-gradient-to-br from-[#fc6957] to-[#ff7d6b] text-white shadow-2xl relative overflow-hidden"
-                    >
-                        <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-white/10 rounded-full blur-2xl" />
-                        <div className="absolute -left-10 -top-10 w-40 h-40 bg-white/10 rounded-full blur-2xl" />
-
-                        <ShieldCheck className="w-12 h-12 mb-4" />
-                        <h3 className="text-2xl font-bold mb-2">Partner Bonus</h3>
-                        <p className="text-white/80 text-sm mb-6 leading-relaxed">
-                            Unlock exclusive rewards and higher commission rates by maintaining a Pro subscription.
-                        </p>
-                        <div className="bg-white/20 backdrop-blur-md rounded-2xl p-4 border border-white/20">
-                            <p className="text-xs font-semibold uppercase tracking-wider text-white/70 mb-1">Current Reward Status</p>
-                            <div className="flex items-center justify-between">
-                                <span className="text-lg font-bold">Standard Tier</span>
-                                <span className="text-white/60 text-xs text-right">3 sales to next tier</span>
-                            </div>
-                            <div className="w-full bg-black/20 h-2 rounded-full mt-2 overflow-hidden">
-                                <motion.div
-                                    initial={{ width: 0 }}
-                                    animate={{ width: '60%' }}
-                                    className="bg-white h-full"
-                                />
-                            </div>
-                        </div>
-                    </motion.div>
                 </div>
             </main>
-
-            {/* Sticky Bottom CTA for Mobile (Optional, but good for responsiveness) */}
-            <div className="md:hidden fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-100 shadow-[0_-10px_20px_rgba(0,0,0,0.05)]">
-                <Button className="w-full h-14">View All Plans</Button>
-            </div>
         </div>
     );
 }

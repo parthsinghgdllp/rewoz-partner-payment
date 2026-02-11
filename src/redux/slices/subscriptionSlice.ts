@@ -1,11 +1,19 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
+import axiosInstance from '@/utils/axiosInstance';
+
+interface Feature {
+    name: string;
+    value: any;
+}
 
 interface Subscription {
     priceId: string;
     name: string;
+    description: string;
     amount: number;
     isActive: boolean;
-    features: string[];
+    features: Feature[];
+    subscriptionEndAt?: string;
 }
 
 interface SubscriptionState {
@@ -15,53 +23,51 @@ interface SubscriptionState {
     doesUserCancelled: boolean;
     subscriptionEndsOn: string | null;
     error: string | null;
+    isSubscribed: boolean;
 }
 
 const initialState: SubscriptionState = {
-    subscriptionList: [
-        {
-            priceId: 'price_1',
-            name: 'Partner Pro Plan',
-            amount: 29.99,
-            isActive: false,
-            features: [
-                'Advanced Analytics Dashboard',
-                'Priority Partner Support',
-                'Unlimited Transaction History',
-                'Exclusive Marketing Assets',
-                'Early Access to New Features'
-            ]
-        },
-        {
-            priceId: 'price_2',
-            name: 'Partner Lite',
-            amount: 0,
-            isActive: true,
-            features: [
-                'Basic Analytics',
-                'Email Support',
-                '30 Days Transaction History',
-                'Standard Marketing Kit'
-            ]
-        }
-    ],
-    anyActivePlan: true,
+    subscriptionList: [],
+    anyActivePlan: false,
     isLoading: false,
     doesUserCancelled: false,
     subscriptionEndsOn: null,
     error: null,
+    isSubscribed: false,
 };
 
-// Mock fetchSubscription
 export const fetchSubscription = createAsyncThunk(
     'subscription/fetch',
     async (_, { rejectWithValue }) => {
         try {
-            // Simulated API call delay
-            await new Promise((resolve) => setTimeout(resolve, 800));
-            return initialState.subscriptionList;
+            const response = await axiosInstance.get('Subscription/plans');
+            return response.data;
         } catch (err: any) {
-            return rejectWithValue(err.message);
+            return rejectWithValue(err.response?.data?.message || err.message);
+        }
+    }
+);
+
+export const subscriptionStatus = createAsyncThunk(
+    'subscription/status',
+    async (_, { rejectWithValue }) => {
+        try {
+            const response = await axiosInstance.get('Subscription/status');
+            return response.data;
+        } catch (err: any) {
+            return rejectWithValue(err.response?.data?.message || err.message);
+        }
+    }
+);
+
+export const cancelSubscription = createAsyncThunk(
+    'subscription/cancel',
+    async (_, { rejectWithValue }) => {
+        try {
+            const response = await axiosInstance.post('Subscription/cancel');
+            return response.data;
+        } catch (err: any) {
+            return rejectWithValue(err.response?.data?.message || err.message);
         }
     }
 );
@@ -69,29 +75,43 @@ export const fetchSubscription = createAsyncThunk(
 const subscriptionSlice = createSlice({
     name: 'subscription',
     initialState,
-    reducers: {
-        cancelSubscription: (state) => {
-            state.doesUserCancelled = true;
-            state.subscriptionEndsOn = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-        },
-        setSubscriptions: (state, action: PayloadAction<Subscription[]>) => {
-            state.subscriptionList = action.payload;
-        }
-    },
+    reducers: {},
     extraReducers: (builder) => {
-        builder.addCase(fetchSubscription.pending, (state) => {
-            state.isLoading = true;
-        });
-        builder.addCase(fetchSubscription.fulfilled, (state, action) => {
-            state.isLoading = false;
-            state.subscriptionList = action.payload;
-        });
-        builder.addCase(fetchSubscription.rejected, (state, action) => {
-            state.isLoading = false;
-            state.error = action.payload as string;
-        });
+        builder
+            .addCase(fetchSubscription.pending, (state) => {
+                state.isLoading = true;
+                state.error = null;
+            })
+            .addCase(fetchSubscription.fulfilled, (state, action: PayloadAction<any[]>) => {
+                const sortedPlans = action.payload.sort((a, b) => a.amount - b.amount);
+                const activePlan = sortedPlans.find(p => p.isActive);
+                const cancelledPlan = sortedPlans.find(p => p.isActive && p.subscriptionEndAt);
+
+                const modifiedPlans = sortedPlans.map((plan) => ({
+                    ...plan,
+                    features: plan.features.map((feature: any) => ({
+                        ...feature,
+                        value: typeof feature.value === 'string' ? JSON.parse(feature.value) : feature.value
+                    }))
+                }));
+
+                state.anyActivePlan = !!activePlan;
+                state.subscriptionList = modifiedPlans;
+                state.doesUserCancelled = !!cancelledPlan;
+                state.subscriptionEndsOn = cancelledPlan?.subscriptionEndAt || null;
+                state.isLoading = false;
+            })
+            .addCase(fetchSubscription.rejected, (state, action) => {
+                state.isLoading = false;
+                state.error = action.payload as string;
+            })
+            .addCase(subscriptionStatus.fulfilled, (state, action: PayloadAction<any>) => {
+                state.isSubscribed = !!action.payload?.data?.isSubscription;
+            })
+            .addCase(cancelSubscription.fulfilled, (state) => {
+                state.isLoading = false;
+            });
     }
 });
 
-export const { cancelSubscription, setSubscriptions } = subscriptionSlice.actions;
 export default subscriptionSlice.reducer;

@@ -1,13 +1,16 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { LogIn, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useRouter } from 'next/navigation';
-import { useDispatch } from 'react-redux';
-import { loginStart, loginSuccess, loginFailure } from '@/redux/slices/authSlice';
+import { useDispatch, useSelector } from 'react-redux';
+import { RootState } from '@/redux/store';
+import { loginUser, logout, clearError } from '@/redux/slices/authSlice';
+import { AnimatePresence } from 'framer-motion';
+import { AlertCircle } from 'lucide-react';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 
@@ -31,37 +34,38 @@ export default function LoginPage() {
     const [showPassword, setShowPassword] = useState(false);
     const router = useRouter();
     const dispatch = useDispatch();
+    const { error, loading } = useSelector((state: RootState) => state.auth);
+
+    useEffect(() => {
+        // Clear any stale errors on mount
+        dispatch(clearError());
+    }, [dispatch]);
 
     const formik = useFormik({
         initialValues: {
             emailOrMobile: '',
             password: '',
+            remember: true,
         },
         validationSchema: validationSchema,
         onSubmit: async (values) => {
-            dispatch(loginStart());
+            const resultAction = await dispatch(loginUser({
+                emailOrMobile: values.emailOrMobile,
+                password: values.password,
+                remember: values.remember,
+            }) as any);
 
-            // Mock login for now
-            try {
-                await new Promise((resolve) => setTimeout(resolve, 1500));
-
-                // Mock success check
-                if (values.password === '1234') { // Native app uses numeric PIN
-                    dispatch(loginSuccess({ email: values.emailOrMobile, name: 'Partner User' }));
-                    router.push('/subscription');
-                } else {
-                    dispatch(loginFailure('Invalid credentials'));
-                }
-            } catch (error) {
-                dispatch(loginFailure('Something went wrong'));
+            if (loginUser.fulfilled.match(resultAction)) {
+                // Check if user has business set up, etc. (similar to mobile logic if needed)
+                router.push('/subscription');
             }
         },
     });
 
-    const { values, errors, touched, handleChange, handleBlur, handleSubmit, isSubmitting } = formik;
+    const { values, errors, touched, handleChange, handleBlur, handleSubmit, isSubmitting, setFieldValue } = formik;
 
     return (
-        <div className="min-h-screen bg-[#FFF8F6] flex items-center justify-center p-4">
+        <div className="min-h-screen bg-[#FFF8F6] flex items-center justify-center p-4 relative overflow-hidden">
             {/* Background Decorative Elements */}
             <div className="absolute top-0 right-0 w-96 h-96 bg-[#fc6957] rounded-full filter blur-[100px] opacity-10 -mr-48 -mt-48" />
             <div className="absolute bottom-0 left-0 w-96 h-96 bg-[#fc6957] rounded-full filter blur-[100px] opacity-10 -ml-48 -mb-48" />
@@ -126,10 +130,17 @@ export default function LoginPage() {
                             </button>
                         </div>
 
+                        {error && (
+                            <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3 mb-2">
+                                <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                                <p className="text-sm text-red-800 font-medium">{error}</p>
+                            </div>
+                        )}
+
                         <Button
                             type="submit"
                             className="w-full h-14 text-lg"
-                            isLoading={isSubmitting}
+                            isLoading={isSubmitting || loading}
                         >
                             Sign In
                         </Button>

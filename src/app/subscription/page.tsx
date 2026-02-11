@@ -20,7 +20,7 @@ import {
 import { Button } from '@/components/ui/Button';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState, AppDispatch } from '@/redux/store';
-import { fetchSubscription, cancelSubscription } from '@/redux/slices/subscriptionSlice';
+import { fetchSubscription, cancelSubscription, createPaymentLink, subscriptionStatus } from '@/redux/slices/subscriptionSlice';
 import { logout } from '@/redux/slices/authSlice';
 import { useRouter } from 'next/navigation';
 import { formatUSD } from '@/utils/currency';
@@ -35,9 +35,11 @@ export default function SubscriptionPage() {
     const { isAuthenticated, user } = useSelector((state: RootState) => state.auth);
 
     const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
+    const [upgradingPriceId, setUpgradingPriceId] = useState<string | null>(null);
 
     useEffect(() => {
         dispatch(fetchSubscription());
+        dispatch(subscriptionStatus());
     }, [dispatch]);
 
     const handleLogout = () => {
@@ -49,6 +51,23 @@ export default function SubscriptionPage() {
         if (confirm('Are you sure you want to cancel your subscription?')) {
             await dispatch(cancelSubscription());
             dispatch(fetchSubscription());
+            dispatch(subscriptionStatus());
+        }
+    };
+
+    const handleUpgrade = async (priceId: string) => {
+        setUpgradingPriceId(priceId);
+        try {
+            const result = await dispatch(createPaymentLink(priceId)).unwrap();
+            if (result.succeeded && result.data) {
+                window.location.href = result.data;
+            } else {
+                alert(result.message || 'Failed to generate payment link');
+                setUpgradingPriceId(null);
+            }
+        } catch (error: any) {
+            alert(error || 'An error occurred');
+            setUpgradingPriceId(null);
         }
     };
 
@@ -191,7 +210,11 @@ export default function SubscriptionPage() {
                                             {doesUserCancelled ? 'Plan Expiring Soon' : 'Cancel Subscription'}
                                         </Button>
                                     ) : (
-                                        <Button className="w-full h-12 shadow-lg group">
+                                        <Button
+                                            className="w-full h-12 shadow-lg group"
+                                            onClick={() => handleUpgrade(plan.priceId)}
+                                            isLoading={upgradingPriceId === plan.priceId}
+                                        >
                                             Upgrade Now
                                             <ChevronRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
                                         </Button>

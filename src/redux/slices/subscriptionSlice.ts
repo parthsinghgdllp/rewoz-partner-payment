@@ -40,7 +40,7 @@ export const fetchSubscription = createAsyncThunk(
     'subscription/fetch',
     async (_, { rejectWithValue }) => {
         try {
-            const response = await axiosInstance.get('Subscription/plans');
+            const response = await axiosInstance.get('subscription/v2/plans');
             return response.data;
         } catch (err: any) {
             return rejectWithValue(err.response?.data?.message || err.message);
@@ -52,7 +52,19 @@ export const subscriptionStatus = createAsyncThunk(
     'subscription/status',
     async (_, { rejectWithValue }) => {
         try {
-            const response = await axiosInstance.get('Subscription/status');
+            const response = await axiosInstance.get('subscription/v2/status');
+            return response.data;
+        } catch (err: any) {
+            return rejectWithValue(err.response?.data?.message || err.message);
+        }
+    }
+);
+
+export const createPaymentLink = createAsyncThunk(
+    'subscription/createPaymentLink',
+    async (stripePriceId: string, { rejectWithValue }) => {
+        try {
+            const response = await axiosInstance.post('subscription/v2/create-payment-link', { stripePriceId });
             return response.data;
         } catch (err: any) {
             return rejectWithValue(err.response?.data?.message || err.message);
@@ -64,7 +76,7 @@ export const cancelSubscription = createAsyncThunk(
     'subscription/cancel',
     async (_, { rejectWithValue }) => {
         try {
-            const response = await axiosInstance.post('Subscription/cancel');
+            const response = await axiosInstance.post('subscription/v2/cancel');
             return response.data;
         } catch (err: any) {
             return rejectWithValue(err.response?.data?.message || err.message);
@@ -82,10 +94,10 @@ const subscriptionSlice = createSlice({
                 state.isLoading = true;
                 state.error = null;
             })
-            .addCase(fetchSubscription.fulfilled, (state, action: PayloadAction<any[]>) => {
-                const sortedPlans = action.payload.sort((a, b) => a.amount - b.amount);
+            .addCase(fetchSubscription.fulfilled, (state, action: PayloadAction<any>) => {
+                const plans = action.payload.data?.plans || [];
+                const sortedPlans = [...plans].sort((a, b) => a.amount - b.amount);
                 const activePlan = sortedPlans.find(p => p.isActive);
-                const cancelledPlan = sortedPlans.find(p => p.isActive && p.subscriptionEndAt);
 
                 const modifiedPlans = sortedPlans.map((plan) => ({
                     ...plan,
@@ -97,8 +109,6 @@ const subscriptionSlice = createSlice({
 
                 state.anyActivePlan = !!activePlan;
                 state.subscriptionList = modifiedPlans;
-                state.doesUserCancelled = !!cancelledPlan;
-                state.subscriptionEndsOn = cancelledPlan?.subscriptionEndAt || null;
                 state.isLoading = false;
             })
             .addCase(fetchSubscription.rejected, (state, action) => {
@@ -106,7 +116,10 @@ const subscriptionSlice = createSlice({
                 state.error = action.payload as string;
             })
             .addCase(subscriptionStatus.fulfilled, (state, action: PayloadAction<any>) => {
-                state.isSubscribed = !!action.payload?.data?.isSubscription;
+                const data = action.payload?.data;
+                state.isSubscribed = !!data?.isSubscription;
+                state.doesUserCancelled = data?.status === 'canceled';
+                state.subscriptionEndsOn = data?.endsAt || null;
             })
             .addCase(cancelSubscription.fulfilled, (state) => {
                 state.isLoading = false;

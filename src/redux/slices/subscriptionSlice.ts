@@ -12,6 +12,9 @@ interface Subscription {
     description: string;
     amount: number;
     isActive: boolean;
+    isTrial: boolean;
+    allowTrial: boolean;
+    trailDays: number;
     features: Feature[];
     subscriptionEndAt?: string;
 }
@@ -22,8 +25,10 @@ interface SubscriptionState {
     isLoading: boolean;
     doesUserCancelled: boolean;
     subscriptionEndsOn: string | null;
+    trialEndsOn: string | null;
     error: string | null;
     isSubscribed: boolean;
+    isTrialing: boolean;
 }
 
 const initialState: SubscriptionState = {
@@ -32,8 +37,10 @@ const initialState: SubscriptionState = {
     isLoading: false,
     doesUserCancelled: false,
     subscriptionEndsOn: null,
+    trialEndsOn: null,
     error: null,
     isSubscribed: false,
+    isTrialing: false,
 };
 
 export const fetchSubscription = createAsyncThunk(
@@ -62,9 +69,9 @@ export const subscriptionStatus = createAsyncThunk(
 
 export const createPaymentLink = createAsyncThunk(
     'subscription/createPaymentLink',
-    async (stripePriceId: string, { rejectWithValue }) => {
+    async (payload: { stripePriceId: string; successUrl: string; cancelUrl: string; redirectUrl: string }, { rejectWithValue }) => {
         try {
-            const response = await axiosInstance.post('subscription/v2/create-payment-link', { stripePriceId });
+            const response = await axiosInstance.post('subscription/v2/create-payment-link', payload);
             return response.data;
         } catch (err: any) {
             return rejectWithValue(err.response?.data?.message || err.message);
@@ -118,8 +125,10 @@ const subscriptionSlice = createSlice({
             .addCase(subscriptionStatus.fulfilled, (state, action: PayloadAction<any>) => {
                 const data = action.payload?.data;
                 state.isSubscribed = !!data?.isSubscription;
+                state.isTrialing = data?.status === 'trialing';
                 state.doesUserCancelled = data?.status === 'canceled';
                 state.subscriptionEndsOn = data?.endsAt || null;
+                state.trialEndsOn = data?.trialEndsAt || null;
             })
             .addCase(cancelSubscription.fulfilled, (state) => {
                 state.isLoading = false;

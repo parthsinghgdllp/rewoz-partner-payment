@@ -37,7 +37,7 @@ export default function SubscriptionPage() {
 function SubscriptionContent() {
     const dispatch = useDispatch<AppDispatch>();
     const router = useRouter();
-    const { subscriptionList, isLoading, doesUserCancelled, subscriptionEndsOn } = useSelector(
+    const { subscriptionList, isLoading, doesUserCancelled, subscriptionEndsOn, isTrialing, trialEndsOn } = useSelector(
         (state: RootState) => state.subscription
     );
     const { isAuthenticated, user } = useSelector((state: RootState) => state.auth);
@@ -76,7 +76,14 @@ function SubscriptionContent() {
     const handleUpgrade = async (priceId: string) => {
         setUpgradingPriceId(priceId);
         try {
-            const result = await dispatch(createPaymentLink(priceId)).unwrap();
+            const baseUrl = window.location.origin;
+            const result = await dispatch(createPaymentLink({
+                stripePriceId: priceId,
+                redirectUrl: `${baseUrl}/subscription/success`,
+                successUrl: `${baseUrl}/subscription/success`,
+                cancelUrl: `${baseUrl}/subscription/cancel`
+            })).unwrap();
+
             if (result.succeeded && result.data) {
                 window.location.href = result.data;
             } else {
@@ -101,6 +108,8 @@ function SubscriptionContent() {
             default: return <CheckCircle2 {...props} />;
         }
     };
+
+    console.log("subscriptionList", subscriptionList)
 
     return (
         <div className="min-h-screen bg-[#FFF8F6] pb-20">
@@ -145,13 +154,24 @@ function SubscriptionContent() {
 
             <main className="max-w-6xl mx-auto px-6 py-12">
                 {/* Status Alert */}
-                {doesUserCancelled && (
-                    <div className="mb-8 p-6 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-4 shadow-sm">
-                        <AlertCircle className="w-6 h-6 text-amber-500 flex-shrink-0 mt-1" />
+                {(doesUserCancelled || isTrialing) && (
+                    <div className={`mb-8 p-6 rounded-2xl flex items-start gap-4 shadow-sm border ${isTrialing ? 'bg-blue-50 border-blue-200' : 'bg-amber-50 border-amber-200'
+                        }`}>
+                        {isTrialing ? (
+                            <Clock className="w-6 h-6 text-blue-500 flex-shrink-0 mt-1" />
+                        ) : (
+                            <AlertCircle className="w-6 h-6 text-amber-500 flex-shrink-0 mt-1" />
+                        )}
                         <div>
-                            <h3 className="font-bold text-amber-900">Subscription Cancelled</h3>
-                            <p className="text-amber-800 text-sm mt-1">
-                                Your access will remain active until <strong>{subscriptionEndsOn ? new Date(subscriptionEndsOn).toLocaleDateString() : 'the next billing cycle'}</strong>.
+                            <h3 className={`font-bold ${isTrialing ? 'text-blue-900' : 'text-amber-900'}`}>
+                                {isTrialing ? 'Free Trial Active' : 'Subscription Cancelled'}
+                            </h3>
+                            <p className={`${isTrialing ? 'text-blue-800' : 'text-amber-800'} text-sm mt-1`}>
+                                {isTrialing ? (
+                                    <>Your trial will expire on <strong>{trialEndsOn ? new Date(trialEndsOn).toLocaleDateString() : 'the end of the period'}</strong>.</>
+                                ) : (
+                                    <>Your access will remain active until <strong>{subscriptionEndsOn ? new Date(subscriptionEndsOn).toLocaleDateString() : 'the next billing cycle'}</strong>.</>
+                                )}
                             </p>
                         </div>
                     </div>
@@ -167,14 +187,17 @@ function SubscriptionContent() {
                         subscriptionList.map((plan, index) => (
                             <div
                                 key={plan.priceId}
-                                className={`relative bg-white rounded-3xl p-8 shadow-xl border-2 w-full max-w-sm ${plan.isActive
-                                    ? 'border-[#fc6957] ring-4 ring-[#fc6957]/5'
+                                className={`relative bg-white rounded-3xl p-8 shadow-xl border-2 w-full max-w-sm ${(plan.isActive || (isTrialing && plan.isTrial))
+                                    ? ((isTrialing && plan.isTrial) ? 'border-blue-400 ring-4 ring-blue-400/10' : 'border-[#fc6957] ring-4 ring-[#fc6957]/5')
                                     : 'border-transparent hover:border-[#fc6957]/30'
                                     }`}
                             >
-                                {plan.isActive && (
-                                    <div className="absolute top-0 right-8 -translate-y-1/2 bg-[#fc6957] text-white px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wider shadow-lg">
-                                        Current Plan
+                                {(plan.isActive || (isTrialing && plan.isTrial)) && (
+                                    <div className={`absolute top-0 right-8 -translate-y-1/2 px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wider shadow-lg ${(isTrialing && plan.isTrial)
+                                        ? 'bg-blue-500 text-white'
+                                        : 'bg-[#fc6957] text-white'
+                                        }`}>
+                                        {(isTrialing && plan.isTrial) ? 'Active (Trial)' : 'Current Plan'}
                                     </div>
                                 )}
 
@@ -190,7 +213,7 @@ function SubscriptionContent() {
                                     {plan.amount > 0 && (
                                         <div className="mt-4 p-2 bg-[#FFF0EE] text-[#fc6957] text-xs font-bold rounded-lg inline-flex items-center gap-2">
                                             <Zap className="w-3 h-3 fill-current" />
-                                            FIRST MONTH COMPLETELY FREE!
+                                            {plan.isTrial ? `${plan.trailDays} DAYS COMPLETELY FREE!` : 'LIMITED TIME OFFER!'}
                                         </div>
                                     )}
                                 </div>

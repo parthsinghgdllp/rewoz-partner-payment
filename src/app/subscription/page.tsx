@@ -24,6 +24,7 @@ import { fetchSubscription, cancelSubscription } from '@/redux/slices/subscripti
 import { logout } from '@/redux/slices/authSlice';
 import { useRouter } from 'next/navigation';
 import { formatUSD } from '@/utils/currency';
+import Image from 'next/image';
 
 export default function SubscriptionPage() {
     const dispatch = useDispatch<AppDispatch>();
@@ -70,8 +71,14 @@ export default function SubscriptionPage() {
             <header className="bg-white border-b border-[#DFE2E5] px-6 py-4 sticky top-0 z-10">
                 <div className="max-w-6xl mx-auto flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 bg-[#fc6957] rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-lg">
-                            R
+                        <div className="relative w-12 h-12">
+                            <Image
+                                src="/images/rewoz_partner_transparent.png"
+                                alt="RewOz Logo"
+                                fill
+                                className="object-contain"
+                                priority
+                            />
                         </div>
                         <div>
                             <h1 className="text-xl font-bold text-[#333333]">Subscriptions</h1>

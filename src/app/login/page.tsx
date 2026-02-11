@@ -13,6 +13,7 @@ import { AnimatePresence } from 'framer-motion';
 import { AlertCircle } from 'lucide-react';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
+import Image from 'next/image';
 
 const validationSchema = Yup.object({
     emailOrMobile: Yup.string()
@@ -34,12 +35,16 @@ export default function LoginPage() {
     const [showPassword, setShowPassword] = useState(false);
     const router = useRouter();
     const dispatch = useDispatch();
-    const { error, loading } = useSelector((state: RootState) => state.auth);
+    const { error, loading, isAuthenticated } = useSelector((state: RootState) => state.auth);
 
     useEffect(() => {
+        // Redirect if already authenticated
+        if (isAuthenticated) {
+            router.replace('/subscription');
+        }
         // Clear any stale errors on mount
         dispatch(clearError());
-    }, [dispatch]);
+    }, [dispatch, isAuthenticated, router]);
 
     const formik = useFormik({
         initialValues: {
@@ -83,9 +88,15 @@ export default function LoginPage() {
                             initial={{ scale: 0.8 }}
                             animate={{ scale: 1 }}
                             transition={{ delay: 0.2, type: 'spring' }}
-                            className="inline-block p-4 bg-white/20 rounded-2xl backdrop-blur-md mb-4"
+                            className="inline-block p-4 bg-white rounded-2xl relative w-20 h-20 mx-auto shadow-xl mb-4"
                         >
-                            <LogIn className="w-8 h-8" />
+                            <Image
+                                src="/images/rewoz_partner_transparent.png"
+                                alt="RewOz Logo"
+                                fill
+                                className="object-contain p-2"
+                                priority
+                            />
                         </motion.div>
                         <h1 className="text-2xl font-bold">Partner Login</h1>
                         <p className="text-white/80 mt-2 text-sm">Welcome back! Please login to your account.</p>

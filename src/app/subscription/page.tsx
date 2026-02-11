@@ -113,11 +113,7 @@ export default function SubscriptionPage() {
                             <h3 className="font-bold text-amber-900">Subscription Cancelled</h3>
                             <p className="text-amber-800 text-sm mt-1">
                                 Your access will remain active until <strong>{subscriptionEndsOn ? new Date(subscriptionEndsOn).toLocaleDateString() : 'the next billing cycle'}</strong>.
-                                After this date, your account will be downgraded to the Lite plan.
                             </p>
-                            <button className="mt-3 text-sm font-bold text-[#fc6957] hover:underline flex items-center gap-1">
-                                Reactivate Plan <ArrowRight className="w-4 h-4" />
-                            </button>
                         </div>
                     </div>
                 )}

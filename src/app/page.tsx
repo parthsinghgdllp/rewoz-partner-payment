@@ -23,7 +23,7 @@ export default function Home() {
             priority
           />
         </div>
-        <p className="text-[#333333] font-medium animate-pulse">Redirecting to login...</p>
+        <p className="text-[#333333] font-medium animate-pulse">Redirecting to please wait...</p>
       </div>
     </div>
   );

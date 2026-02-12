@@ -5,6 +5,10 @@ import { ReduxProvider } from "@/redux/provider";
 export const metadata: Metadata = {
   title: "RewOz Partner - Payment Portal",
   description: "Secure partner payment and subscription management for RewOz",
+  icons: {
+    icon: "/images/rewoz_partner_transparent.png",
+    apple: "/images/rewoz_partner_transparent.png",
+  },
 };
 
 export default function RootLayout({

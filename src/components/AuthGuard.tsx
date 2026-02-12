@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState, AppDispatch } from '@/redux/store';
-import { setToken, validateToken } from '@/redux/slices/authSlice';
+import { setToken, validateToken, logout } from '@/redux/slices/authSlice';
 import Image from 'next/image';
 
 interface AuthGuardProps {
@@ -29,8 +29,15 @@ export default function AuthGuard({ children, requireAuth = true }: AuthGuardPro
 
     useEffect(() => {
         const urlToken = searchParams.get('token');
+        const storedToken = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
 
         if (urlToken) {
+            // If we have a new token from URL, and it's different from the stored one,
+            // or if we just want to ensure we're using the URL token's session, 
+            // we should clear the current state first.
+            if (urlToken !== storedToken) {
+                dispatch(logout());
+            }
             setIsValidating(true);
             setTokenFromUrl(urlToken);
             handleTokenFromUrl(urlToken);

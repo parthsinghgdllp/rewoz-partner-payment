@@ -15,7 +15,9 @@ import {
     Gift,
     Clock,
     DollarSign,
-    Database
+    Database,
+    User,
+    ChevronDown
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { useDispatch, useSelector } from 'react-redux';
@@ -47,6 +49,7 @@ function SubscriptionContent() {
 
     const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
     const [upgradingPriceId, setUpgradingPriceId] = useState<string | null>(null);
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     useEffect(() => {
         dispatch(fetchSubscription());
@@ -114,6 +117,7 @@ function SubscriptionContent() {
                                 src="/images/rewoz_partner_transparent.png"
                                 alt="RewOz Logo"
                                 fill
+                                sizes="48px"
                                 className="object-contain"
                                 priority
                             />
@@ -124,22 +128,82 @@ function SubscriptionContent() {
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-4">
+                    <div className="relative">
                         {user && (
-                            <div className="hidden md:block text-right">
-                                <p className="text-sm font-semibold">
-                                    {user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Partner User'}
-                                </p>
-                                <p className="text-xs text-gray-500">{user.email}</p>
-                            </div>
+                            <button
+                                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                                className="flex items-center gap-2 p-1 hover:bg-gray-100 rounded-full transition-colors border border-gray-200 shadow-sm pr-2"
+                            >
+                                <div className="w-8 h-8 rounded-full bg-[#fc6957]/10 flex items-center justify-center text-[#fc6957] overflow-hidden relative">
+                                    {user?.profileUrl ? (
+                                        <Image
+                                            src={user.profileUrl}
+                                            alt="Profile"
+                                            fill
+                                            sizes="32px"
+                                            className="object-cover"
+                                        />
+                                    ) : (
+                                        <User className="w-5 h-5" />
+                                    )}
+                                </div>
+                                <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isMenuOpen ? 'rotate-180' : ''}`} />
+                            </button>
                         )}
-                        <button
-                            onClick={handleLogout}
-                            className="p-2 hover:bg-red-50 text-red-500 rounded-lg transition-colors group"
-                            title="Logout"
-                        >
-                            <LogOut className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                        </button>
+
+                        <AnimatePresence>
+                            {isMenuOpen && (
+                                <>
+                                    {/* Backdrop to close menu */}
+                                    <div
+                                        className="fixed inset-0 z-40"
+                                        onClick={() => setIsMenuOpen(false)}
+                                    />
+
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                        className="absolute right-0 mt-2 w-72 bg-white rounded-2xl shadow-2xl border border-gray-100 py-2 z-50 overflow-hidden"
+                                    >
+                                        <div className="px-5 py-4 border-b border-gray-50 mb-1 flex items-center gap-4">
+                                            <div className="w-12 h-12 rounded-full bg-[#fc6957]/10 flex items-center justify-center text-[#fc6957] overflow-hidden relative flex-shrink-0">
+                                                {user?.profileUrl ? (
+                                                    <Image
+                                                        src={user.profileUrl}
+                                                        alt="Profile"
+                                                        fill
+                                                        sizes="48px"
+                                                        className="object-cover"
+                                                    />
+                                                ) : (
+                                                    <User className="w-6 h-6" />
+                                                )}
+                                            </div>
+                                            <div className="overflow-hidden">
+                                                <p className="text-sm font-bold text-[#333333] truncate">
+                                                    {user?.name || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'Partner User'}
+                                                </p>
+                                                <p className="text-xs text-gray-500 truncate mt-0.5">
+                                                    {user?.email}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <button
+                                            onClick={() => {
+                                                setIsMenuOpen(false);
+                                                handleLogout();
+                                            }}
+                                            className="w-full flex items-center gap-3 px-5 py-3 text-red-500 hover:bg-red-50 transition-colors text-sm font-medium"
+                                        >
+                                            <LogOut className="w-4 h-4" />
+                                            Log Out
+                                        </button>
+                                    </motion.div>
+                                </>
+                            )}
+                        </AnimatePresence>
                     </div>
                 </div>
             </header>
@@ -205,14 +269,14 @@ function SubscriptionContent() {
                                     {plan.amount > 0 && (
                                         <div className="mt-4 p-2 bg-[#FFF0EE] text-[#fc6957] text-xs font-bold rounded-lg inline-flex items-center gap-2">
                                             <Zap className="w-3 h-3 fill-current" />
-                                            {plan.isTrial ? `${plan.trailDays} DAYS COMPLETELY FREE!` : 'LIMITED TIME OFFER!'}
+                                            {plan.trailDays ? `${plan.trailDays} DAYS COMPLETELY FREE!` : 'LIMITED TIME OFFER!'}
                                         </div>
                                     )}
                                 </div>
 
                                 <div className="space-y-4 mb-8">
                                     <div className="flex items-center justify-between">
-                                        <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest">What's Included</h3>
+                                        <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest">What&#39;s Included</h3>
                                         <button
                                             onClick={() => setExpandedIndex(expandedIndex === index ? null : index)}
                                             className="text-xs font-bold text-[#fc6957] hover:bg-[#FFF0EE] px-2 py-1 rounded transition-colors"

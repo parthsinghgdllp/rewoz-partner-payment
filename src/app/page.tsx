@@ -37,6 +37,7 @@ function HomeContent() {
             src="/images/rewoz_partner_transparent.png"
             alt="RewOz Logo"
             fill
+            sizes="80px"
             className="object-contain"
             priority
           />

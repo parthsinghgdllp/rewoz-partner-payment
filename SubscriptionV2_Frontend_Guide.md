@@ -151,3 +151,26 @@
   ]
 }
 ```
+
+---
+
+## 7. Frontend Integration: Payment History
+
+### Location & UX Rationale
+We chose to place the **Payment History** section **below the available subscription plans**.
+
+**Why?**
+1.  **Current Focus**: Users primarily visit the subscription page to check their *current status* or *upgrade/change plans*. This information should remain at the top for immediate access.
+2.  **Secondary Information**: Historical data (past invoices) is important for record-keeping but less frequently accessed than current plan status or upgrade options.
+3.  **Visual Hierarchy**: Placing a data-heavy table at the bottom avoids cluttering the main decision-making area which is focused on plan cards and pricing.
+
+### UI Component Structure
+The Payment History section features:
+-   **Header**: Clear title with icon ("Payment History") for context.
+-   **Table Layout**: A clean, responsive table showing:
+    -   **Invoice ID**: Truncated or full ID.
+    -   **Date**: Formatted date string.
+    -   **Amount**: Currency formatted amount.
+    -   **Method**: Payment method icon and name.
+    -   **Status**: Color-coded badge for quick status recognition (Succeeded, Pending, Failed).
+-   **State Management**: Data is fetched via `fetchPaymentHistory` Redux action on page load and stored in `state.subscription.paymentHistory`.

@@ -20,24 +20,27 @@ import {
 import { Button } from '@/components/ui/Button';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState, AppDispatch } from '@/redux/store';
-import { fetchSubscription, cancelSubscription, createPaymentLink, subscriptionStatus } from '@/redux/slices/subscriptionSlice';
-import { logout, setToken, validateToken } from '@/redux/slices/authSlice';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { fetchSubscription, cancelSubscription, createPaymentLink, subscriptionStatus, fetchPaymentHistory } from '@/redux/slices/subscriptionSlice';
+import { logout } from '@/redux/slices/authSlice';
+import { useRouter } from 'next/navigation';
 import { formatUSD } from '@/utils/currency';
 import Image from 'next/image';
+import AuthGuard from '@/components/AuthGuard';
 
 export default function SubscriptionPage() {
     return (
-        <Suspense fallback={<div className="min-h-screen bg-[#FFF8F6] flex items-center justify-center">Loading...</div>}>
-            <SubscriptionContent />
-        </Suspense>
+        <AuthGuard requireAuth={true}>
+            <Suspense fallback={<div className="min-h-screen bg-[#FFF8F6] flex items-center justify-center">Loading...</div>}>
+                <SubscriptionContent />
+            </Suspense>
+        </AuthGuard>
     );
 }
 
 function SubscriptionContent() {
     const dispatch = useDispatch<AppDispatch>();
     const router = useRouter();
-    const { subscriptionList, isLoading, doesUserCancelled, subscriptionEndsOn, isTrialing, trialEndsOn } = useSelector(
+    const { subscriptionList, isLoading, doesUserCancelled, subscriptionEndsOn, isTrialing, trialEndsOn, paymentHistory } = useSelector(
         (state: RootState) => state.subscription
     );
     const { isAuthenticated, user } = useSelector((state: RootState) => state.auth);
@@ -45,20 +48,11 @@ function SubscriptionContent() {
     const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
     const [upgradingPriceId, setUpgradingPriceId] = useState<string | null>(null);
 
-    const searchParams = useSearchParams();
-    const token = searchParams.get('token');
-
     useEffect(() => {
-        if (token) {
-            dispatch(setToken(token));
-            dispatch(validateToken(token));
-            const url = new URL(window.location.href);
-            url.searchParams.delete('token');
-            router.replace(url.pathname + url.search);
-        }
         dispatch(fetchSubscription());
         dispatch(subscriptionStatus());
-    }, [dispatch, token, router]);
+        dispatch(fetchPaymentHistory());
+    }, [dispatch]);
 
     const handleLogout = () => {
         dispatch(logout());
@@ -108,8 +102,6 @@ function SubscriptionContent() {
             default: return <CheckCircle2 {...props} />;
         }
     };
-
-    console.log("subscriptionList", subscriptionList)
 
     return (
         <div className="min-h-screen bg-[#FFF8F6] pb-20">
@@ -177,7 +169,7 @@ function SubscriptionContent() {
                     </div>
                 )}
 
-                <div className="flex flex-wrap justify-center items-start gap-8">
+                <div className="flex flex-wrap justify-center items-start gap-8 mb-20">
                     {isLoading ? (
                         // Skeleton Loader
                         Array(2).fill(0).map((_, i) => (
@@ -266,8 +258,74 @@ function SubscriptionContent() {
                             </div>
                         ))
                     )}
-
                 </div>
+
+                {/* Payment History Section */}
+                {paymentHistory && paymentHistory.length > 0 && (
+                    <div className="mt-16 border-t border-gray-200 pt-16">
+                        <div className="flex items-center gap-3 mb-8">
+                            <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center">
+                                <CreditCard className="w-5 h-5 text-orange-600" />
+                            </div>
+                            <div>
+                                <h2 className="text-2xl font-bold text-[#333333]">Payment History</h2>
+                                <p className="text-sm text-gray-500">View your past transactions and invoices</p>
+                            </div>
+                        </div>
+
+                        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left text-sm">
+                                    <thead className="bg-gray-50/50 border-b border-gray-100">
+                                        <tr>
+                                            <th className="px-6 py-4 font-semibold text-gray-600">Invoice ID</th>
+                                            <th className="px-6 py-4 font-semibold text-gray-600">Date</th>
+                                            <th className="px-6 py-4 font-semibold text-gray-600">Amount</th>
+                                            <th className="px-6 py-4 font-semibold text-gray-600">Method</th>
+                                            <th className="px-6 py-4 font-semibold text-gray-600 text-right">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-50">
+                                        {paymentHistory.map((payment) => (
+                                            <tr key={payment.id} className="hover:bg-gray-50/50 transition-colors">
+                                                <td className="px-6 py-4 font-medium text-gray-900">
+                                                    #{payment.invoiceId?.slice(-8) || payment.id}
+                                                </td>
+                                                <td className="px-6 py-4 text-gray-600">
+                                                    {new Date(payment.paidAt).toLocaleDateString(undefined, {
+                                                        year: 'numeric',
+                                                        month: 'short',
+                                                        day: 'numeric'
+                                                    })}
+                                                </td>
+                                                <td className="px-6 py-4 font-medium text-gray-900">
+                                                    {new Intl.NumberFormat('en-AU', {
+                                                        style: 'currency',
+                                                        currency: payment.currency || 'AUD'
+                                                    }).format(payment.amountPaid)}
+                                                </td>
+                                                <td className="px-6 py-4 text-gray-600 capitalize">
+                                                    <div className="flex items-center gap-2">
+                                                        <CreditCard className="w-4 h-4 text-gray-400" />
+                                                        {payment.paymentMethod}
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4 text-right">
+                                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize
+                                                        ${payment.status === 'succeeded' ? 'bg-green-100 text-green-800' :
+                                                            payment.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                                                'bg-gray-100 text-gray-800'}`}>
+                                                        {payment.status}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </main>
         </div>
     );

@@ -19,8 +19,19 @@ interface Subscription {
     subscriptionEndAt?: string;
 }
 
+interface PaymentHistory {
+    id: number;
+    paymentMethod: string;
+    amountPaid: number;
+    currency: string;
+    status: string;
+    paidAt: string;
+    invoiceId: string;
+}
+
 interface SubscriptionState {
     subscriptionList: Subscription[];
+    paymentHistory: PaymentHistory[];
     anyActivePlan: boolean;
     isLoading: boolean;
     doesUserCancelled: boolean;
@@ -33,6 +44,7 @@ interface SubscriptionState {
 
 const initialState: SubscriptionState = {
     subscriptionList: [],
+    paymentHistory: [],
     anyActivePlan: false,
     isLoading: false,
     doesUserCancelled: false,
@@ -42,6 +54,18 @@ const initialState: SubscriptionState = {
     isSubscribed: false,
     isTrialing: false,
 };
+
+export const fetchPaymentHistory = createAsyncThunk(
+    'subscription/fetchHistory',
+    async (_, { rejectWithValue }) => {
+        try {
+            const response = await axiosInstance.get('subscription/v2/payments');
+            return response.data;
+        } catch (err: any) {
+            return rejectWithValue(err.response?.data?.message || err.message);
+        }
+    }
+);
 
 export const fetchSubscription = createAsyncThunk(
     'subscription/fetch',
@@ -132,6 +156,9 @@ const subscriptionSlice = createSlice({
             })
             .addCase(cancelSubscription.fulfilled, (state) => {
                 state.isLoading = false;
+            })
+            .addCase(fetchPaymentHistory.fulfilled, (state, action: PayloadAction<any>) => {
+                state.paymentHistory = action.payload.data || [];
             });
     }
 });

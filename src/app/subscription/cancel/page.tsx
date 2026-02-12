@@ -70,6 +70,7 @@ export default function CancelPage() {
                             src="/images/rewoz_partner_transparent.png"
                             alt="RewOz Logo"
                             fill
+                            sizes="24px"
                             className="object-contain"
                         />
                     </div>

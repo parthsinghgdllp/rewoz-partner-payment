@@ -31,11 +31,11 @@ import AuthGuard from '@/components/AuthGuard';
 
 export default function SubscriptionPage() {
     return (
-        <AuthGuard requireAuth={true}>
-            <Suspense fallback={<div className="min-h-screen bg-[#FFF8F6] flex items-center justify-center">Loading...</div>}>
+        <Suspense fallback={<div className="min-h-screen bg-[#FFF8F6] flex items-center justify-center">Loading...</div>}>
+            <AuthGuard requireAuth={true}>
                 <SubscriptionContent />
-            </Suspense>
-        </AuthGuard>
+            </AuthGuard>
+        </Suspense>
     );
 }
 

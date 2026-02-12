@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { motion } from 'framer-motion';
 import { LogIn, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
@@ -33,6 +33,26 @@ const validationSchema = Yup.object({
 });
 
 export default function LoginPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen bg-[#FFF8F6] flex items-center justify-center text-[#fc6957]">
+            <div className="flex flex-col items-center gap-4">
+                <div className="relative w-16 h-16 animate-pulse">
+                    <Image
+                        src="/images/rewoz_partner_transparent.png"
+                        alt="Loading"
+                        fill
+                        className="object-contain"
+                    />
+                </div>
+                <p className="text-sm font-medium">Preparing secure login...</p>
+            </div>
+        </div>}>
+            <LoginContent />
+        </Suspense>
+    );
+}
+
+function LoginContent() {
     const [showPassword, setShowPassword] = useState(false);
     const router = useRouter();
     const dispatch = useDispatch();

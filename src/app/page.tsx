@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import AuthGuard from '@/components/AuthGuard';
@@ -9,9 +9,11 @@ import { RootState } from '@/redux/store';
 
 export default function Home() {
   return (
-    <AuthGuard requireAuth={false}>
-      <HomeContent />
-    </AuthGuard>
+    <Suspense fallback={null}>
+      <AuthGuard requireAuth={false}>
+        <HomeContent />
+      </AuthGuard>
+    </Suspense>
   );
 }
 

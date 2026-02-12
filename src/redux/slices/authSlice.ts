@@ -88,7 +88,6 @@ const authSlice = createSlice({
             state.error = null;
         },
         setToken: (state, action: PayloadAction<string>) => {
-            state.isAuthenticated = true;
             if (typeof window !== 'undefined') {
                 localStorage.setItem('accessToken', action.payload);
             }
@@ -120,7 +119,12 @@ const authSlice = createSlice({
             })
             .addCase(validateToken.rejected, (state, action: PayloadAction<any>) => {
                 state.loading = false;
+                state.isAuthenticated = false;
                 state.error = action.payload;
+                if (typeof window !== 'undefined') {
+                    localStorage.removeItem('accessToken');
+                    localStorage.removeItem('user');
+                }
             });
     },
 });

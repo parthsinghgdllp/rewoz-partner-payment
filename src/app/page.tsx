@@ -3,13 +3,31 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import AuthGuard from '@/components/AuthGuard';
+import { useSelector } from 'react-redux';
+import { RootState } from '@/redux/store';
 
 export default function Home() {
+  return (
+    <AuthGuard requireAuth={false}>
+      <HomeContent />
+    </AuthGuard>
+  );
+}
+
+function HomeContent() {
   const router = useRouter();
+  const { isAuthenticated, loading } = useSelector((state: RootState) => state.auth);
 
   useEffect(() => {
-    router.replace('/login');
-  }, [router]);
+    if (!loading) {
+      if (isAuthenticated) {
+        router.replace('/subscription');
+      } else {
+        router.replace('/login');
+      }
+    }
+  }, [router, isAuthenticated, loading]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#FFF8F6]">
@@ -23,7 +41,7 @@ export default function Home() {
             priority
           />
         </div>
-        <p className="text-[#333333] font-medium animate-pulse">Redirecting to please wait...</p>
+        <p className="text-[#333333] font-medium animate-pulse">Redirecting, please wait...</p>
       </div>
     </div>
   );

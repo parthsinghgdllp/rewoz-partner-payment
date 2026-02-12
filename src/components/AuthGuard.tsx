@@ -16,9 +16,15 @@ export default function AuthGuard({ children, requireAuth = true }: AuthGuardPro
     const router = useRouter();
     const dispatch = useDispatch<AppDispatch>();
     const searchParams = useSearchParams();
-    const { isAuthenticated, loading, user } = useSelector((state: RootState) => state.auth);
+    const { isAuthenticated, loading } = useSelector((state: RootState) => state.auth);
 
-    const [isValidating, setIsValidating] = useState(requireAuth && !isAuthenticated);
+    const [isValidating, setIsValidating] = useState(() => {
+        if (typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search);
+            if (params.has('token')) return true;
+        }
+        return requireAuth && !isAuthenticated;
+    });
     const [tokenFromUrl, setTokenFromUrl] = useState<string | null>(null);
 
     useEffect(() => {
@@ -93,7 +99,9 @@ export default function AuthGuard({ children, requireAuth = true }: AuthGuardPro
         }
     };
 
-    if ((isValidating && (requireAuth || tokenFromUrl)) || (requireAuth && loading)) {
+    const hasTokenInUrl = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('token');
+
+    if ((isValidating && (requireAuth || hasTokenInUrl)) || (requireAuth && loading)) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-[#FFF8F6]">
                 <div className="flex flex-col items-center gap-4">
